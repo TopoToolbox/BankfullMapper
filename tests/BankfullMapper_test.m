@@ -1,4 +1,4 @@
-classdef BankFullMapper_test < matlab.unittest.TestCase
+classdef BankfullMapper_test < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         % Shared setup for the entire test class
