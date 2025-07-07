@@ -1,10 +1,11 @@
 function R=manningseq(SW,z,z_dem,step,d,zvar,varargin)
 
-% MANNINGSEQ Computes Manning's Equation Q = 1/n * (A/P)^(2/3) * S^(1/2) *A
+% MANNINGSEQ computes the Manning's Equation Q = 1/n * (A/P)^(2/3) * S^(1/2)
+% * A
 %
 % Syntax
 %
-%    R = manningseq(SW,z,z_dem,step,d,H)
+%    R=manningseq(SW,z,z_dem,step,d,H)
 %
 % Description
 %
@@ -22,7 +23,6 @@ function R=manningseq(SW,z,z_dem,step,d,zvar,varargin)
 %     slope     river gradient
 %
 % Optional Input arguments
-%
 %     n         n coefficient
 %     plot      plotting the results
 %
@@ -39,9 +39,10 @@ function R=manningseq(SW,z,z_dem,step,d,zvar,varargin)
 %
 % Author: Michele Delchiaro (michele.delchiaro[at]uniroma1.it)
 % Date: 11. July, 2024
-
-
+%
+%
 % Parse inputs
+
 p = inputParser;
 p.FunctionName = 'manningseq';
 addRequired(p,'SW',@(x) isa(x,'SWATHobj'));

@@ -1,7 +1,7 @@
 %% EXAMPLE1: POTENZA RIVER CASE STUDY (MARCHE, ITALY)
 
 %% WORKING DIRECTORY
-WD="path\to\downloaded\data\";
+WD='path\to\downloaded\data\';
 
 %% INPUT DATA
 % load DEM

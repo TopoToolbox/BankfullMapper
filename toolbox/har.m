@@ -11,11 +11,12 @@ function REM=har(DEM,S)
 %     This function allows to compute the Relative Elevation Model (REM) or
 %     Height Above River (HAR) model of a river
 %
+%
 % Input arguments
 %
 %     DEM       high resolution GRIDobj
-%     S         river course, as a STREAMobj or as a structure array 
-%               obtained by a shapefile
+%     S         river course, as a STREAMobj or as a structure array obtained by a
+%               shapefile
 %
 % Output arguments
 %
