@@ -1,0 +1,43 @@
+name: Latest Release
+
+# The release event will trigger a workflow run. This is different to
+# the MATLAB latest release workflow because we want to create
+# releases manually.
+on:
+  release:
+    types: [published]
+
+jobs:
+  # This job will build the BankfullMapper toolbox and save it as an
+  # artifact.
+  package:
+    # Check that the repository is the TopoToolbox one to avoid
+    # running this workflow on forks
+    if: github.repository == 'TopoToolbox/BankfullMapper'
+    name: Package toolbox
+    # Since BankfullMapper is a pure MATLAB toolbox, it does not need
+    # to be compiled for different platforms. We run on ubuntu just
+    # for convenience, but it should work on other platforms as well.
+    runs-on: ubuntu-latest
+    # Ensure that the job has write permissions to the repository so
+    # it can upload assets.
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v2
+        with:
+          cache: true
+      - name: Build package
+        uses: matlab-actions/run-build@v2
+        with:
+          tasks: package
+      - name: Upload toolbox assets to release
+        run: gh release upload --repo $GITHUB_REPOSITORY $TAG release/*
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
