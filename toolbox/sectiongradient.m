@@ -18,11 +18,9 @@ function [slope,zw,zc,zs]=sectiongradient(DEM,SW,step,varargin)
 % Input arguments
 %
 %     DEM       high-resolution GRIDobj (used in the prof function)
-%     SW        SWATHobj of the river profile (obtained from the prof 
-%               function)
+%     SW        SWATHobj of the river profile (obtained from the prof function)
 %     z         z-values of the profiles (from HAR)
-%     step      distance in meters between the profiles (used in the prof 
-%               function)
+%     step      distance in meters between the profiles (used in the prof function)
 %
 % Optional Input arguments
 %

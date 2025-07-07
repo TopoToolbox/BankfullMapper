@@ -9,12 +9,11 @@ function lim=detect_peak(h,a,w,d_elev,d,z,varargin)
 %
 % Description
 %
-%     This function allows to detect the peaks from the flow heigh above
-%     thalveg vs. hydraulic depth hydraulic depth curves of each profiles.
-%     It is possible to detect the all the peaks (using 'all' option), most
-%     prominent peaks (using 'max' option), and lowest peaks (using
-%     'lowest' option). For the 'max' and 'lowest' option, the most
-%     probable Z value is also computed.
+%     This function allows to detect the peaks from the flow heigh above thalveg vs. hydraulic depth
+%     hydraulic depth curves of each profiles. It is possible to detect the
+%     all the peaks (using 'all' option), most prominent peaks (using 'max' option),
+%     and lowest peaks (using 'lowest' option). For the 'max' and 'lowest'
+%     option, the most probable Z value is also computed.
 %
 %
 % Input arguments
@@ -25,12 +24,9 @@ function lim=detect_peak(h,a,w,d_elev,d,z,varargin)
 %     d_elev    flow height values
 %
 % Optional Input arguments
-%
 %     d         an array of the distance of the profiles (from prof
-%               function). It is necessary if 'peak' option is 'max' or
-%               'lowest'
-%     z         z-values of the profiles (from HAR). It is necessary if
-%     'peak' option is 'max' or 'lowest'
+%               function). It is necessary if 'peak' option is 'max' or 'lowest'
+%     z         z-values of the profiles (from HAR). It is necessary if 'peak' option is 'max' or 'lowest'
 %     'peak'    string
 %        'all': all the peaks are extracted
 %        'max': the most prominent peaks are extracted
@@ -40,18 +36,15 @@ function lim=detect_peak(h,a,w,d_elev,d,z,varargin)
 % Output arguments
 %
 %     lim       the structure array with section numbers (sections field),
-%               peak elevation above thalveg values (zlim), the most
-%               probable peak elevation above thalveg for each section
-%               based on the 2d kernel distribution estimation of zlim
-%               values (zvar), peak hydraulic depth values (hlim), peak
-%               hydraulic depth values using zvar (hvar only if 'peak'
-%               option is 'max' or 'lowest'), flow area values (alim), flow
-%               area values using zvar (avar only if 'peak' option is 'max'
-%               or 'lowest'), flow width values (wlim), flow width values
-%               using zvar (wvar only if 'peak' option is 'max' or
-%               'lowest'). For 'max' and 'lowest' peak detection, the most
-%               probable elevation above thalveg value of the peaks is also
-%               reported (Z).
+%               peak elevation above thalveg values (zlim), the most probable 
+%               peak elevation above thalveg for each section based on the 
+%               2d kernel distribution estimation of zlim values (zvar), peak hydraulic
+%               depth values (hlim), peak hydraulic depth values using zvar 
+%               (hvar only if 'peak' option is 'max' or 'lowest'), flow area values (alim),
+%               flow area values using zvar (avar only if 'peak' option is 'max' or 'lowest'), 
+%               flow width values (wlim), flow width values using zvar (wvar only if 'peak' option is 'max' or 'lowest'). 
+%               For 'max' and 'lowest' peak detection, the most probable elevation above thalveg
+%               value of the peaks is also reported (Z).
 %
 %
 % Author: Michele Delchiaro (michele.delchiaro[at]uniroma1.it)

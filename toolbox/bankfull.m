@@ -5,13 +5,13 @@ function bank=bankfull(d,z,varargin)
 % 
 % Syntax
 %
-%    bank = bankfull(d,z)
+%    bank=bankfull(d,z)
 %
 % Description
 %
-%     This function allows to extract flow height above thalveg vs.
-%     hydraulic depth values from the profiles obtained by the function
-%     PROF. For each profile, the hydraulic depth, defined as the ratio
+%     This function allows to extract flow height above thalveg vs. 
+%     hydraulic depth values from the profiles obtained by the function PROF.
+%     For each profile, the hydraulic depth, defined as the ratio
 %     between the flow area and the flow width, is computed for different
 %     heights from the thalveg. In detail, the heigths range from 0 to
 %     max_depth every 10 cm.

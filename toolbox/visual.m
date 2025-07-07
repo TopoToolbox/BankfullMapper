@@ -1,12 +1,10 @@
 function [final_Zlim,final_Zvar,final_Qlim,final_Qvar,residual_Z,residual_Q,res_Z,res_Q]=visual(HAR,DEM,SW,step,zlim,zvar,qlim,qvar,varargin)
 
-% VISUAL map visualization of the bankfull geometry and discharge 
+%     map visualization of the bankfull geometry and discharge 
 %
 % Syntax
 %
-%    [final_Zlim,final_Zvar,final_Qlim,...
-%     final_Qvar,residual_Z,residual_Q,res_Z,res_Q]= ...
-%                   visual(HAR,DEM,SW,step,zlim,zvar,qlim,qvar)
+%    [final_Zlim,final_Zvar,final_Qlim,final_Qvar,residual_Z,residual_Q,res_Z,res_Q]=visual(HAR,DEM,SW,step,zlim,zvar,qlim,qvar)
 %
 % Description
 %
@@ -17,8 +15,9 @@ function [final_Zlim,final_Zvar,final_Qlim,final_Qvar,residual_Z,residual_Q,res_
 %     the discharge visualization, both the discharge computed with the
 %     peak elevation values and that with the most probable elevation
 %     values are used. The bankfull elevation and discharge residuals are
-%     also computed by subtracting the most probable values with the peak
-%     values.
+%     also computed by subtracting the most probable values with the peak values.
+%
+%
 %
 % Input arguments
 %
@@ -26,34 +25,28 @@ function [final_Zlim,final_Zvar,final_Qlim,final_Qvar,residual_Z,residual_Q,res_
 %     HAR       high resolution GRIDobj
 %     SW        SWATHobj of the river profile
 %     step      stepping in meters of the profiles
-%     zlim      peak elevation above thalveg values (see DETECT_PEAK 
-%               results)
-%     zvar      most probable elevation values above thalveg values (see 
-%               DETECT_PEAK results)
-%     qlim      discharge values (computed with peak elevation values zlim 
-%               using MANNINGEQ function)
-%     qvar      discharge values (computed with the most probable elevation 
-%               values zvar using MANNINGEQ function)
+%     zlim      peak elevation above thalveg values (see DETECT_PEAK results)
+%     zvar      most probable elevation values above thalveg values (see DETECT_PEAK results)
+%     qlim      discharge values (computed with peak elevation values zlim using MANNINGEQ function)
+%     qvar      discharge values (computed with the most probable elevation values zvar using MANNINGEQ function)
 %
 % Output arguments
 % 
-%     final_Zlim        GRIDobj of the REM with the values below the most 
-%                       probable peak elevation 
+%     final_Zlim        GRIDobj of the REM with the values below the most probable peak elevation 
 %     final_Zvar        GRIDobj of the REM with the variable z values 
-%     final_Qlim        GRIDobj of the REM with discharge values with 
-%                       constant z 
-%     final_Qvar        GRIDobj of the REM with discharge values with 
-%                       variable z
-%     residual_Z        GRIDobj of the residual between the residual error
-%                       between the peak elevation of each section and the
-%                       most probable elevation                   
-%     residual_Q        GRIDobj of the residual between the residual error 
-%                       between the discharge of each section extracted  
-%                       with constant z and the most probabledischarge 
+%     final_Qlim        GRIDobj of the REM with discharge values with constant z 
+%     final_Qvar        GRIDobj of the REM with discharge values with variable z
+%     residual_Z        GRIDobj of the residual between the residual error between
+%                       the peak elevation of each section and the most probable 
+%                       elevation 
+%     residual_Q        GRIDobj of the residual between the residual error between
+%                       the discharge of each section extracted with constant z and the most probable 
+%                       discharge 
 %     res_Z             array of the elevation residual values    
-%     res_Q             array of the discharge values extracted with 
-%                       constant z
+%     res_Q             array of the discharge values extracted with constant z     
 %
+%
+% 
 % Author: Michele Delchiaro (michele.delchiaro[at]uniroma1.it)
 % Date: 11. July, 2024
 %

@@ -11,7 +11,9 @@ You can either download the entire toolbox and add the folder `toolbox` and its 
 
 This toolkit includes Matlab functions to analyze the river bankfull geometry and derive discharge estimate applying Manning's equation. 
 
-This toolkit requires TopoToolbox, which can be downloaded from https://github.com/topotoolbox/topotoolbox3, and needs the same MATLAB's built-in packages required for runnning TopoToolbox.
+This toolkit requires TopoToolbox, which can be downloaded from https://github.com/wschwanghart/topotoolbox, and needs the same Matlab's built-in packages required for runnning TopoToolbox.
+
+In addition to the built-in MATLAB packages required by TopoToolbox, this toolkit also requires the Signal Processing Toolbox.
 
 
 ## Getting Started
@@ -24,6 +26,6 @@ To run the tool with your data, just follow the general workflow in the WORKFLOW
 
 ## References
 
-Delchiaro, M., Ruscitto, V., Schwanghart, W., Brignone, E., Piacentini, D., and Troiani, F.. “BankfullMapper: a semi-automated MATLAB tool on high-resolution Digital Terrain Models for spatio-temporal monitoring of bankfull geometry and discharge”. Computers and Geosciences (in review).
+Delchiaro, M., Ruscitto, V., Schwanghart, W., Brignone, E., Piacentini, D., and Troiani, F.. “BankfullMapper: a semi-automated MATLAB tool on high-resolution Digital Terrain Models for spatio-temporal monitoring of bankfull geometry and discharge”. Computers and Geosciences (under review).
 
-Schwanghart, W., & Scherler, D., 2014. “TopoToolbox 2–MATLAB-based software for topographic analysis and modeling in Earth surface sciences”. Earth Surface Dynamics, 2(1), 1-7. [https://doi.org/10.5194/esurf-2-1-2014](https://doi.org/10.5194/esurf-2-1-2014)
+Schwanghart, W., & Scherler, D., 2014. “TopoToolbox 2–MATLAB-based software for topographic analysis and modeling in Earth surface sciences”. Earth Surface Dynamics, 2(1), 1-7. https://doi.org/10.5194/esurf-2-1-2014

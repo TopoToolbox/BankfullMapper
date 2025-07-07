@@ -12,12 +12,13 @@ function [d,z,z_dem,x,y,SW]=prof(DEM,HAR,S,varargin)
 %     Model (REM) or Height Above River (HAR) model as well as from Digital
 %     Elevation Model (DEM) 
 %
+%
 % Input arguments
 %
 %     DEM       high resolution GRIDobj
 %     HAR       high resolution GRIDobj
-%     S         river course, as a STREAMobj or as a structure array 
-%               obtained by a shapefile or from an free hand drawn line
+%     S         river course, as a STREAMobj or as a structure array obtained by a
+%               shapefile or from an free hand drawn line
 %
 % Optional Input arguments
 %     step      stepping in meters between transversal river profiles
