@@ -93,7 +93,7 @@ switch meth
 
         for p = 1:sz(1,2)
 
-            if ~license('test', 'Signal_Toolbox')
+            if license('test', 'Signal_Toolbox')
 
                 [hl{p,1}, zl{p,1},~,~] = findpeaks(h(:,p),d_elev);
 
@@ -178,7 +178,7 @@ switch meth
             at=a(:,p);
 
             % Find the indices of the local maxima
-            if ~license('test', 'Signal_Toolbox')
+            if license('test', 'Signal_Toolbox')
 
                 % Find the indices of the local maxima
                 [hl, zl,~,pr] = findpeaks(h(:,p),d_elev,'SortStr','descend');
@@ -317,7 +317,7 @@ switch meth
             wt=w(:,p);
             at=a(:,p);
             % Find the indices of the local maxima
-            if ~license('test', 'Signal_Toolbox')
+            if license('test', 'Signal_Toolbox')
                 [hl, zl,~,~] = findpeaks(h(:,p),d_elev,'SortStr','descend');
             else
 
