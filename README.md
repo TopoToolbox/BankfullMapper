@@ -11,7 +11,7 @@ You can either download the entire toolbox and add the folder `toolbox` and its 
 
 This toolkit includes MATLAB functions to analyze the river bankfull geometry and derive discharge estimate applying Manning's equation. 
 
-This toolkit requires TopoToolbox, which can be downloaded from [here](https://github.com/TopoToolbox/topotoolbox3), and needs the same MATLAB's built-in packages (Image Processing Toolbox, Mapping Toolbox) required for runnning TopoToolbox.
+This toolkit requires TopoToolbox, which can be downloaded from [here](https://github.com/TopoToolbox/topotoolbox3), and needs the same MATLAB's built-in packages (Image Processing Toolbox, Mapping Toolbox) required for running TopoToolbox.
 
 
 ## Getting Started
