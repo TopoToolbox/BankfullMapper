@@ -13,8 +13,6 @@ This toolkit includes MATLAB functions to analyze the river bankfull geometry an
 
 This toolkit requires TopoToolbox, which can be downloaded from [here](https://github.com/TopoToolbox/topotoolbox3), and needs the same MATLAB's built-in packages (Image Processing Toolbox, Mapping Toolbox) required for runnning TopoToolbox.
 
-In addition to the built-in MATLAB packages required by TopoToolbox, this toolkit also requires the Signal Processing Toolbox.
-
 
 ## Getting Started
 

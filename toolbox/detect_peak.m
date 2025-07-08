@@ -93,7 +93,18 @@ switch meth
 
         for p = 1:sz(1,2)
 
-            [hl{p,1}, zl{p,1},~,~] = findpeaks(h(:,p),d_elev);
+            if license('test', 'Signal_Toolbox')
+
+                [hl{p,1}, zl{p,1},~,~] = findpeaks(h(:,p),d_elev);
+
+            else
+
+                htemp=h(:,p);
+                idx = islocalmax(htemp);
+                hl{p,1} = htemp(idx);
+                zl{p,1} = d_elev(idx);
+
+            end
 
             if isnumeric(zl{p})
                 % Concatenate the values to the zlim and hlim arrays
@@ -167,9 +178,35 @@ switch meth
             at=a(:,p);
 
             % Find the indices of the local maxima
-            [hl, zl,~,pr] = findpeaks(h(:,p),d_elev,'SortStr','descend');
+            if license('test', 'Signal_Toolbox')
 
-            max_pr=max(pr(~isinf(pr)));
+                % Find the indices of the local maxima
+                [hl, zl,~,pr] = findpeaks(h(:,p),d_elev,'SortStr','descend');
+
+                max_pr=max(pr(~isinf(pr)));
+
+            else
+
+                htemp = h(:,p);
+                idx = islocalmax(htemp);
+                hl_all = htemp(idx);
+                zl_all = d_elev(idx);
+
+                % Calculate prominence manually
+                pr = zeros(size(hl_all));
+                for j = 1:length(hl_all)
+                    peak_idx = find(d_elev == zl_all(j));
+                    left_min = min(htemp(1:peak_idx));
+                    right_min = min(htemp(peak_idx:end));
+                    pr(j) = hl_all(j) - max(left_min, right_min);
+                end
+
+                % Sort by descending prominence
+                [pr, sort_idx] = sort(pr, 'descend');
+                hl = hl_all(sort_idx);
+                zl = zl_all(sort_idx);
+                max_pr = max(pr(~isinf(pr)));
+            end
 
             if isempty(zl)
                 zlim(1,p)=nan;
@@ -280,7 +317,15 @@ switch meth
             wt=w(:,p);
             at=a(:,p);
             % Find the indices of the local maxima
-            [hl, zl,~,~] = findpeaks(h(:,p),d_elev,'SortStr','descend');
+            if license('test', 'Signal_Toolbox')
+                [hl, zl,~,~] = findpeaks(h(:,p),d_elev,'SortStr','descend');
+            else
+
+                htemp=h(:,p);
+                idx = islocalmax(htemp);
+                hl = htemp(idx);
+                zl = d_elev(idx);
+            end
 
             if isempty(zl)
                 zlim(1,p)=nan;
