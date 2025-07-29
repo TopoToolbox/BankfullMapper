@@ -1,3 +1,5 @@
+[![BankfullMapper-for-MATLAB on File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://uk.mathworks.com/matlabcentral/fileexchange/181632-bankfullmapper)
+
 # BankfullMapper
 
 <img src="images/bankfull_map.png" align="center" width=500>
