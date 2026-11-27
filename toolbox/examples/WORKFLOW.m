@@ -22,30 +22,39 @@ S='interactive';
 % OPTION 1: import REM from other sourses (such as QGIS)
 REM=GRIDobj(WD+"REM.tif");
 REM=resample(REM,DEM,'nearest');
-% OPTION 2: compute REM 
+% OPTION 2: compute REM (IDW of the river course elevation; S must be a
+% shapefile structure or a STREAMobj, not 'interactive')
 REM=har(DEM,S);
 
 
 % Optional inputs
 step=50;        % stepping in meters between transversal river profiles
 width=200;      % width in meters of the transversal river profiles
-smooth=0;       % smoothing of the planar trace from which the profiles are extracted
+smooth=false;   % smoothing of the planar trace (true/false, TopoToolbox 3)
+sf=0.25;        % smoothing factor (0-1) used if smooth=true
 max_depth=6;    % maximum height from the thalveg for which the bankfull is computed
 n=0.05;         % n riverbed roughness coefficient in Manning's equation (Manning, 1904)
+connected=true; % consider only the wet area connected to the thalweg/river trace
+clip=true;      % cut the transversal profiles where they reach another reach of the river (tight meanders)
+tw=10;          % thalweg window (m): the thalweg is the lowest point within tw meters from the river course
+                % (increase it if the river course does not follow the channel, e.g. comparing different dates)
+% NOTE: the profile width must include both valley sides up to max_depth
+% (check bank.zspill and the warning of BANKFULL); 3-5 times the channel
+% width is a good starting point.
 
 %% PROFILING 
-[d,z,z_dem,x,y,SW]=prof(DEM,REM,S,'step',step,'width',width,'smooth',smooth,'plot',true);
+[d,z,z_dem,x,y,SW]=prof(DEM,REM,S,'step',step,'width',width,'smooth',smooth,'smoothingfactor',sf,'clip',clip,'plot',true);
 
 %% HYDRAULIC DEPTH FUNCTION COMPUTATION
-bank=bankfull(d,z,'max_depth',max_depth);
+bank=bankfull(d,z,'max_depth',max_depth,'connected',connected,'thalwegwindow',tw);
 
 %% PEAKS EXTRACTION FROM HYDRAULIC DEPTH FUNCTION 
 % ALL MODE: all the peaks are extracted
 lim_all=detect_peak(bank.h,bank.area,bank.width,bank.elevation,'peak','all');
 % LOWEST MODE: the lowest peaks are extracted
-lim_low=detect_peak(bank.h,bank.area,bank.width,bank.elevation,d,z,'peak','lowest');
+lim_low=detect_peak(bank.h,bank.area,bank.width,bank.elevation,d,z,'peak','lowest','connected',connected,'thalwegwindow',tw);
 % MAX MODE: the most prominent peaks are extracted
-lim_max=detect_peak(bank.h,bank.area,bank.width,bank.elevation,d,z,'peak','max');
+lim_max=detect_peak(bank.h,bank.area,bank.width,bank.elevation,d,z,'peak','max','connected',connected,'thalwegwindow',tw);
 
 %% SLOPE COMPUTATION (choose one option and comment the others)
 % OPTION1: if you are using a shp as river course or interactive stream drawing
@@ -53,23 +62,27 @@ ws=10;          % cell windowsize for moving average computation on slope smooth
 [slope,~,~,~]=sectiongradient(DEM,SW,step,'windowsize',ws);
 % OPTION2: if you are using a STREAMobj as river course (for further details refer to TopoToolbox documentation)
 zs = crs(S,DEM,'K',10,'tau',0.5);
-slope = gradient(S,zs);
+g = gradient(S,zs);                         % one value per stream node
+dix = round(step/SW.dx);                    % map node values to the sections
+ixs = 1:dix:numel(SW.distx);                % (same indexing as PROF)
+idx = knnsearch([S.x S.y],SW.xy(ixs,:));
+slope = g(idx)';                            % one value per section
 
 %% MANNING'S EQUATION COMPUTATION (for lowest and max mode extracted peaks)
 % discharge computation using the measured peak elevation 
-R_low=manningseq(SW,z,z_dem,step,d,lim_low.zlim,'n',n,'slope',slope);
-R_max=manningseq(SW,z,z_dem,step,d,lim_max.zlim,'n',n,'slope',slope);
+R_low=manningseq(SW,z,z_dem,step,d,lim_low.zlim,'n',n,'slope',slope,'connected',connected,'thalwegwindow',tw);
+R_max=manningseq(SW,z,z_dem,step,d,lim_max.zlim,'n',n,'slope',slope,'connected',connected,'thalwegwindow',tw);
 
 % discharge computation using the most probable elevation 
-R_low2=manningseq(SW,z,z_dem,step,d,lim_low.zvar,'n',n,'slope',slope);
-R_max2=manningseq(SW,z,z_dem,step,d,lim_max.zvar,'n',n,'slope',slope);
+R_low2=manningseq(SW,z,z_dem,step,d,lim_low.zvar,'n',n,'slope',slope,'connected',connected,'thalwegwindow',tw);
+R_max2=manningseq(SW,z,z_dem,step,d,lim_max.zvar,'n',n,'slope',slope,'connected',connected,'thalwegwindow',tw);
 
 
 %% BANKFULL GEOMETRY AND DISCHARGE MAPPING 
 % for lowest mode extracted peaks
-[f_Zlim_low,f_Zvar_low,f_Qlim_low,f_Qvar_low,residual_Z_low,residual_Q_low,res_Z_low,res_Q_low]=visual(REM,DEM,SW,step,lim_low.zlim,lim_low.zvar,R_low.Q_zvar,R_low2.Q_zvar,'plot',false);
+[f_Zlim_low,f_Zvar_low,f_Qlim_low,f_Qvar_low,residual_Z_low,residual_Q_low,res_Z_low,res_Q_low]=visual(REM,DEM,SW,step,lim_low.zlim,lim_low.zvar,R_low.Q_zvar,R_low2.Q_zvar,'connected',connected,'thalwegwindow',tw,'plot',false);
 % for max mode extracted peaks
-[f_Zlim_max,f_Zvar_max,f_Qlim_max,f_Qvar_max,residual_Z_max,residual_Q_max,res_Z_max,res_Q_max]=visual(REM,DEM,SW,step,lim_max.zlim,lim_max.zvar,R_max.Q_zvar,R_max2.Q_zvar,'plot',false);
+[f_Zlim_max,f_Zvar_max,f_Qlim_max,f_Qvar_max,residual_Z_max,residual_Q_max,res_Z_max,res_Q_max]=visual(REM,DEM,SW,step,lim_max.zlim,lim_max.zvar,R_max.Q_zvar,R_max2.Q_zvar,'connected',connected,'thalwegwindow',tw,'plot',false);
 
 
 %% EXPORTING OUTPUTS 
