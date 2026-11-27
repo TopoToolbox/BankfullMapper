@@ -10,7 +10,9 @@ function R=manningseq(SW,z,z_dem,step,d,zvar,varargin)
 % Description
 %
 %     This function allows to compute the river discharge using the
-%     Manning's equation
+%     Manning's equation. Flow area, width and wetted perimeter are
+%     computed exactly on the vertices of the profile and on its
+%     intersections with the water level (no resampling of the profile).
 %
 % Input arguments
 %
@@ -24,6 +26,19 @@ function R=manningseq(SW,z,z_dem,step,d,zvar,varargin)
 %
 % Optional Input arguments
 %     n         n coefficient
+%     slope     river gradient: scalar or one value per section
+%     connected true (default): flow area, width and wetted perimeter are
+%               computed only on the wet portion containing the thalweg.
+%               false: original behaviour (all portions below zvar)
+%     thalwegwindow half-width in meters of the window around the centre
+%               of the profile (d = 0) where the thalweg is searched as the
+%               lowest point (default 10). The wet area connected to the
+%               thalweg is considered when 'connected' is true. Increase it
+%               when the river course does not follow the channel, e.g.
+%               when profiles of a single river course are used to compare
+%               DEMs of different dates after channel migration (the window
+%               should cover the channel shift, but not include gravel pits
+%               or other depressions far from the channel)
 %     plot      plotting the results
 %
 % Output arguments
@@ -38,7 +53,7 @@ function R=manningseq(SW,z,z_dem,step,d,zvar,varargin)
 %     slope      river gradient for each section
 %
 % Author: Michele Delchiaro (michele.delchiaro[at]uniroma1.it)
-% Date: 11. July, 2024
+% Date: 11. July, 2024, - updated 27. November, 2026
 %
 %
 % Parse inputs
@@ -53,6 +68,8 @@ addRequired(p,'d',@(x) isnumeric(x))
 addRequired(p,'zvar',@(x) isnumeric(x))
 addParameter(p,'n',0.05,@(x) isnumeric(x))
 addParameter(p,'slope',[],@(x) isnumeric(x));
+addParameter(p,'connected',true,@(x) isscalar(x))
+addParameter(p,'thalwegwindow',10,@(x) isnumeric(x) && isscalar(x) && x>=0)
 addParameter(p,'plot',true)
 
 parse(p,SW,z,z_dem,step,d,zvar,varargin{:});
@@ -60,6 +77,9 @@ parse(p,SW,z,z_dem,step,d,zvar,varargin{:});
 n=p.Results.n;
 slope=p.Results.slope;
 plt=p.Results.plot;
+connected=logical(p.Results.connected);
+twin=p.Results.thalwegwindow;
+zvar=zvar(:)';   % row vector
 
 %%
 
@@ -77,66 +97,22 @@ tic
 
 for p=1:sz(1,1)
 
-    x1 = d;
-
-    x2 = [min(d) max(d)];
-
     y1 = z(p,:);
 
-    if isnan(zvar(1,p))
-        % Skip when zvar(1,p) is NaN
-        continue;
-    else
+    % valid points of the profile (NaN: clipped ends or nodata)
+    v = ~isnan(d) & ~isnan(y1);
 
-        y2 = [zvar(1,p) zvar(1,p)];
-        % make common x coordinates
-
-        xq = linspace(min([x1,x2]), max([x1,x2]),1e6);     % New ,x1 and x2 Vector For Interpolation
-
-        y1i = interp1(x1(~isnan(x1)), y1(~isnan(x1)), xq, 'linear','extrap');   % Interpolate To ‘xq’
-
-        y2i = interp1(x2, y2, xq, 'linear','extrap');   % Interpolate To ‘xq’
-
-
-        % Use polyxpoly to find intersection points for wet perimeter calculus
-        [intersection_x, ~] = polyxpoly(x1, y1, x2, y2);
-
-        % Combine x and y coordinates of both lines
-        all_x_coordinates = [xq, x2];
-        all_y_coordinates = [y1i, y2];
-
-        % Initialize sum of lengths
-        length_sum = 0;
-
-
-
-        % Process segments below intersections
-        for i = 1:length(intersection_x)-1
-            % Find indices corresponding to the current segment
-            indices = find(all_x_coordinates >= intersection_x(i) & all_x_coordinates <= intersection_x(i+1));
-
-            % Calculate length of the current segment only if it's below the line2
-            for j = 1:length(indices)-1
-                if all_y_coordinates(indices(j)) <= y2(1)
-                    segment_length = sqrt((all_x_coordinates(indices(j+1)) - all_x_coordinates(indices(j)))^2 + ...
-                        (all_y_coordinates(indices(j+1)) - all_y_coordinates(indices(j)))^2);
-                    length_sum = length_sum + segment_length;
-                end
-            end
-        end
-
-
-        wet_p_zvar(1,p)=length_sum;
-
-        % area calculus
-        di=diff(intersection_x);
-        width_zvar(1,p)=sum(di(1:2:end));
-
-        area_zvar(1,p)=trapz(xq,y2i)-trapz([min(xq) xq(y1i<zvar(1,p)) max(xq)], [zvar(1,p) y1i(y1i<zvar(1,p)) zvar(1,p)]);
-
+    if isnan(zvar(1,p)) || nnz(v) < 2
+        % Skip when zvar(1,p) is NaN or the profile is empty
+        area_zvar(1,p)=NaN;
+        wet_p_zvar(1,p)=NaN;
+        width_zvar(1,p)=NaN;
+        continue
     end
 
-
+    % flow area, width and wetted perimeter (exact, profile closed by walls)
+    xt = thalwegposition(d(v),y1(v),twin);
+    [area_zvar(1,p),width_zvar(1,p),wet_p_zvar(1,p)] = wetgeometry(d(v),y1(v),zvar(1,p),connected,xt);
 
     waitbar(p/sz(1,1), verbose, sprintf('Processing section %d of %d', p, sz(1,1)));
 
@@ -152,13 +128,18 @@ if isempty(slope)
 
 end
 
-Q_zvar=1/n.*((area_zvar/wet_p_zvar).^(2/3)).*(abs(slope).^(1/2)).*area_zvar;
+slope=slope(:)';   % row vector (one value per section) or scalar
+if ~isscalar(slope) && numel(slope)~=sz(1,1)
+    error('manningseq:slope','slope must be a scalar or have one value per section (%d values given, %d sections).',numel(slope),sz(1,1))
+end
+
+Q_zvar=1/n.*((area_zvar./wet_p_zvar).^(2/3)).*(abs(slope).^(1/2)).*area_zvar;
 
 Q_zvar(Q_zvar==0)=NaN;
 
-[f, xi] = ksdensity(Q_zvar, 'Bandwidth', 10);
+[f, xi] = ksdensity(Q_zvar(~isnan(Q_zvar)), 'Bandwidth', 10);
 
-Qi_zvar=xi(f==max(f));
+Qi_zvar=xi(find(f==max(f),1));
 
 % make struct file of the results
 
@@ -195,3 +176,84 @@ end
 
 end
 
+%% ------------------------------------------------------------------------
+function [A,W,P] = wetgeometry(xv,yv,L,connected,xt)
+% WETGEOMETRY exact flow area (A), flow width (W) and wetted perimeter (P)
+% of the profile (xv,yv) for the water level L.
+%
+% The profile is a polyline (the bed is linear between consecutive
+% vertices) closed at both ends by vertical walls, so the water is always
+% confined within the profile. Each wet interval is delimited by the
+% intersections between the water level and the profile (or by the walls);
+% the area is computed with TRAPZ on the vertices and the intersections,
+% which is exact for a polyline. The walls are not part of the wetted
+% perimeter. If connected is true, only the wet interval containing the
+% thalweg (x = xt) is considered.
+
+A = 0; W = 0; P = 0;
+
+[xv,o] = sort(xv(:)');
+yv = yv(:)';
+yv = yv(o);
+n = numel(xv);
+
+wet = yv < L;
+if ~any(wet)
+    return
+end
+
+% runs of consecutive wet vertices
+dw = diff([false wet false]);
+i1 = find(dw == 1);
+i2 = find(dw == -1) - 1;
+
+for k = 1:numel(i1)
+    a = i1(k);
+    b = i2(k);
+    xs = xv(a:b);
+    ys = yv(a:b);
+
+    % left boundary: intersection with the water level or wall
+    if a > 1
+        xa = xv(a-1) + (L-yv(a-1)) / (yv(a)-yv(a-1)) * (xv(a)-xv(a-1));
+        xs = [xa xs]; %#ok<AGROW>
+        ys = [L ys];  %#ok<AGROW>
+    end
+    % right boundary: intersection with the water level or wall
+    if b < n
+        xb = xv(b) + (L-yv(b)) / (yv(b+1)-yv(b)) * (xv(b+1)-xv(b));
+        xs = [xs xb]; %#ok<AGROW>
+        ys = [ys L];  %#ok<AGROW>
+    end
+
+    if connected && ~(xs(1) <= xt && xs(end) >= xt)
+        continue
+    end
+
+    A = A + trapz(xs, L - ys);
+    W = W + (xs(end) - xs(1));
+    P = P + sum(hypot(diff(xs), diff(ys)));
+
+    if connected
+        break
+    end
+end
+end
+
+%% ------------------------------------------------------------------------
+function xt = thalwegposition(xv,yv,twin)
+% THALWEGPOSITION position of the thalweg along the profile (xv,yv): the
+% lowest point within twin meters from the centre of the profile (d = 0).
+% If no point lies within the window, the point closest to the centre is
+% used.
+m = abs(xv) <= twin;
+if ~any(m)
+    [~,k] = min(abs(xv));
+    xt = xv(k);
+    return
+end
+xm = xv(m);
+ym = yv(m);
+[~,k] = min(ym);
+xt = xm(k);
+end

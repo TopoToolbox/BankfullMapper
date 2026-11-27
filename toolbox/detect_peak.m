@@ -31,7 +31,25 @@ function lim=detect_peak(h,a,w,d_elev,d,z,varargin)
 %        'all': all the peaks are extracted
 %        'max': the most prominent peaks are extracted
 %        'lowest': the lowest peaks are extracted
+%     connected  true (default): flow area and width at zvar are computed
+%                only on the wet portion containing the thalweg.
+%                false: original behaviour (all portions below zvar)
+%     thalwegwindow half-width in meters of the window around the centre
+%               of the profile (d = 0) where the thalweg is searched as the
+%               lowest point (default 10). The wet area connected to the
+%               thalweg is considered when 'connected' is true. Increase it
+%               when the river course does not follow the channel, e.g.
+%               when profiles of a single river course are used to compare
+%               DEMs of different dates after channel migration (the window
+%               should cover the channel shift, but not include gravel pits
+%               or other depressions far from the channel)
 %      plot      plotting the results
+%
+%     Peaks are detected with ISLOCALMAX (MATLAB base): the Signal
+%     Processing Toolbox is not required. Only the interior local maxima of
+%     the first continuous run of non-NaN values of each curve are
+%     considered. With the 'max' option, if two peaks have the same
+%     prominence the lowest one is taken.
 %
 % Output arguments
 %
@@ -48,7 +66,7 @@ function lim=detect_peak(h,a,w,d_elev,d,z,varargin)
 %
 %
 % Author: Michele Delchiaro (michele.delchiaro[at]uniroma1.it)
-% Date: 11. July, 2024
+% Date: 11. July, 2024, - updated 27. November, 2026
 %
 % Parse inputs
 p = inputParser;
@@ -61,12 +79,16 @@ addRequired(p,'d_elev',@(x) isnumeric(x))
 addOptional(p,'d',@(x) isnumeric(x))
 addOptional(p,'z',@(x) isnumeric(x))
 addParameter(p,'peak','all',@(x) ischar(validatestring(x,{'all','max','lowest'})))
+addParameter(p,'connected',true,@(x) isscalar(x))
+addParameter(p,'thalwegwindow',10,@(x) isnumeric(x) && isscalar(x) && x>=0)
 addParameter(p,'plot',true)
 
 parse(p,h,a,w,d_elev,d,z,varargin{:});
 
 %% peak detection
 plt=p.Results.plot;
+connected=logical(p.Results.connected);
+twin=p.Results.thalwegwindow;
 
 meth = validatestring(p.Results.peak,{'all','max','lowest'});
 
@@ -87,69 +109,37 @@ switch meth
 
         zlim = [];
         hlim = [];
+        alim = [];
+        wlim = [];
 
         % Store the sections numbers in the sections vector
         sections = [];
 
         for p = 1:sz(1,2)
 
-            if license('test', 'Signal_Toolbox')
+            idx = localpeaks(h(:,p));
+            hl{p,1} = h(idx,p);
+            zl{p,1} = d_elev(idx);
 
-                [hl{p,1}, zl{p,1},~,~] = findpeaks(h(:,p),d_elev);
+            % Concatenate the values to the zlim and hlim arrays
+            zlim = [zlim, zl{p, 1}];
+            hlim = [hlim; hl{p, 1}];
+            alim = [alim, a(idx,p)'];
+            wlim = [wlim, w(idx,p)'];
 
-            else
-
-                htemp=h(:,p);
-                idx = islocalmax(htemp);
-                hl{p,1} = htemp(idx);
-                zl{p,1} = d_elev(idx);
-
-            end
-
-            if isnumeric(zl{p})
-                % Concatenate the values to the zlim and hlim arrays
-
-                zlim = [zlim, zl{p, 1}];
-
-                hlim = [hlim; hl{p, 1}];
-
-                % Store the sections numbers
-                sections = [sections, repmat(p, 1, numel(zl{p, 1}))];
-
-            end
+            % Store the sections numbers
+            sections = [sections, repmat(p, 1, numel(zl{p, 1}))];
 
 
         end
 
-        % detect alim and wlim values
-
-        alim=[];
-        wlim=[];
-
-        zlim(isinf(hlim))=[];
-        sections(isinf(hlim))=[];
-        hlim(isinf(hlim))=[];
-
-        for p=1:sz(1,2)
-
-            ht=h(:,p);
-            hp=hlim(sections==p);
-            wt=w(:,p);
-            at=a(:,p);
-
-
-
-            for m=1:numel(hp)
-
-                A=at(ht==hp(m));
-                W=wt(ht==hp(m));
-                alim=[alim,A];
-                wlim=[wlim,W];
-
-
-            end
-
-        end
+        % remove infinite values (if any)
+        ii = isinf(hlim(:)');
+        zlim(ii)=[];
+        sections(ii)=[];
+        alim(ii)=[];
+        wlim(ii)=[];
+        hlim(ii)=[];
 
 
         lim.sections=sections;
@@ -177,66 +167,36 @@ switch meth
             wt=w(:,p);
             at=a(:,p);
 
-            % Find the indices of the local maxima
-            if license('test', 'Signal_Toolbox')
+            % Find the indices and prominence of the local maxima
+            [idx,pr] = localpeaks(h(:,p));
 
-                % Find the indices of the local maxima
-                [hl, zl,~,pr] = findpeaks(h(:,p),d_elev,'SortStr','descend');
-
-                max_pr=max(pr(~isinf(pr)));
-
-            else
-
-                htemp = h(:,p);
-                idx = islocalmax(htemp);
-                hl_all = htemp(idx);
-                zl_all = d_elev(idx);
-
-                % Calculate prominence manually
-                pr = zeros(size(hl_all));
-                for j = 1:length(hl_all)
-                    peak_idx = find(d_elev == zl_all(j));
-                    left_min = min(htemp(1:peak_idx));
-                    right_min = min(htemp(peak_idx:end));
-                    pr(j) = hl_all(j) - max(left_min, right_min);
-                end
-
-                % Sort by descending prominence
-                [pr, sort_idx] = sort(pr, 'descend');
-                hl = hl_all(sort_idx);
-                zl = zl_all(sort_idx);
-                max_pr = max(pr(~isinf(pr)));
-            end
-
-            if isempty(zl)
+            if isempty(idx)
                 zlim(1,p)=nan;
                 hlim(1,p)=nan;
-            else
-                zlim(1,p)=zl(pr==max_pr);
-                hlim(1,p)=hl(zl==zlim(1,p));
-
-            end
-
-            if isnan(hlim(1,p))||isinf(hlim(1,p))
                 alim(1,p)=NaN;
                 wlim(1,p)=NaN;
-
             else
-
-                alim(1,p)=at(h(:,p)==hlim(1,p));
-                wlim(1,p)=wt(h(:,p)==hlim(1,p));
+                % most prominent peak (the lowest one if more peaks have
+                % the same prominence)
+                [~,j] = max(pr);
+                k = idx(j);
+                zlim(1,p)=d_elev(k);
+                hlim(1,p)=h(k,p);
+                alim(1,p)=at(k);
+                wlim(1,p)=wt(k);
             end
 
 
         end
 
-        [f, xi] = ksdensity(zlim, 'Bandwidth', 0.2);
-        Z=xi(f==max(f));
+        [f, xi] = ksdensity(zlim(~isnan(zlim)), 'Bandwidth', 0.2);
+        Z=xi(find(f==max(f),1));
 
         % computing the zvar from the most probable kernel distribution
         n_points = 100;
         [xi, yi] = meshgrid(linspace(min(sections), max(sections), n_points), linspace(min(zlim), max(zlim), n_points));
         xy = [sections', zlim'];
+        xy = xy(~any(isnan(xy),2),:);   % sections without peak are ignored
         [f,~] = ksdensity(xy, [xi(:), yi(:)]);
         f = reshape(f, n_points, n_points);
 
@@ -257,31 +217,21 @@ switch meth
         %%
         for p=1:sz(1,2)
 
-            x1 = d;
-
-            x2 = [min(d) max(d)];
-
             y1 = z(p,:);
 
-            y2 = [zvar(1,p) zvar(1,p)];
+            % valid points of the profile (NaN: clipped ends or nodata)
+            v = ~isnan(d) & ~isnan(y1);
 
-            % make common x coordinates
+            if isnan(zvar(1,p)) || nnz(v) < 2
+                width_zvar(1,p)=NaN;
+                area_zvar(1,p)=NaN;
+                h_var(1,p)=NaN;
+                continue
+            end
 
-            xq = linspace(min([x1,x2]), max([x1,x2]),1e6);     % New ,x1 and x2 Vector For Interpolation
-
-            y1i = interp1(x1(~isnan(x1)), y1(~isnan(x1)), xq, 'linear','extrap');   % Interpolate To ‘xq’
-
-            y2i = interp1(x2, y2, xq, 'linear','extrap');   % Interpolate To ‘xq’
-
-
-            % Use polyxpoly to find intersection points for wet perimeter calculus
-            [intersection_x, ~] = polyxpoly(x1, y1, x2, y2);
-
-
-            di=diff(intersection_x);
-            width_zvar(1,p)=sum(di(1:2:end));
-
-            area_zvar(1,p)=trapz(xq,y2i)-trapz([min(xq) xq(y1i<zvar(1,p)) max(xq)], [zvar(1,p) y1i(y1i<zvar(1,p)) zvar(1,p)]);
+            % flow area and width at zvar (exact, profile closed by walls)
+            xt = thalwegposition(d(v),y1(v),twin);
+            [area_zvar(1,p),width_zvar(1,p)] = wetgeometry(d(v),y1(v),zvar(1,p),connected,xt);
             h_var(1,p)=area_zvar(1,p)./width_zvar(1,p);
 
         end
@@ -317,45 +267,33 @@ switch meth
             wt=w(:,p);
             at=a(:,p);
             % Find the indices of the local maxima
-            if license('test', 'Signal_Toolbox')
-                [hl, zl,~,~] = findpeaks(h(:,p),d_elev,'SortStr','descend');
-            else
+            idx = localpeaks(h(:,p));
 
-                htemp=h(:,p);
-                idx = islocalmax(htemp);
-                hl = htemp(idx);
-                zl = d_elev(idx);
-            end
-
-            if isempty(zl)
+            if isempty(idx)
                 zlim(1,p)=nan;
                 hlim(1,p)=nan;
-            else
-                zlim(1,p)=min(zl);
-                hlim(1,p)=hl(zl==min(zl));
-
-            end
-
-            if isnan(hlim(1,p))
                 alim(1,p)=NaN;
                 wlim(1,p)=NaN;
-
             else
-
-                alim(1,p)=at(h(:,p)==hlim(1,p));
-                wlim(1,p)=wt(h(:,p)==hlim(1,p));
+                % lowest peak
+                k = idx(1);
+                zlim(1,p)=d_elev(k);
+                hlim(1,p)=h(k,p);
+                alim(1,p)=at(k);
+                wlim(1,p)=wt(k);
             end
 
 
         end
 
-        [f, xi] = ksdensity(zlim, 'Bandwidth', 0.2);
-        Z=xi(f==max(f));
+        [f, xi] = ksdensity(zlim(~isnan(zlim)), 'Bandwidth', 0.2);
+        Z=xi(find(f==max(f),1));
 
         % computing the zvar from the most probable kernel distribution
         n_points = 400;
         [xi, yi] = meshgrid(linspace(min(sections), max(sections), n_points), linspace(min(zlim), max(zlim), n_points));
         xy = [sections', zlim'];
+        xy = xy(~any(isnan(xy),2),:);   % sections without peak are ignored
         [f,~] = ksdensity(xy, [xi(:), yi(:)]);
         f = reshape(f, n_points, n_points);
 
@@ -377,31 +315,21 @@ switch meth
         %%
         for p=1:sz(1,2)
 
-            x1 = d;
-
-            x2 = [min(d) max(d)];
-
             y1 = z(p,:);
 
-            y2 = [zvar(1,p) zvar(1,p)];
+            % valid points of the profile (NaN: clipped ends or nodata)
+            v = ~isnan(d) & ~isnan(y1);
 
-            % make common x coordinates
+            if isnan(zvar(1,p)) || nnz(v) < 2
+                width_zvar(1,p)=NaN;
+                area_zvar(1,p)=NaN;
+                h_var(1,p)=NaN;
+                continue
+            end
 
-            xq = linspace(min([x1,x2]), max([x1,x2]),1e6);     % New ,x1 and x2 Vector For Interpolation
-
-            y1i = interp1(x1(~isnan(x1)), y1(~isnan(x1)), xq, 'linear','extrap');   % Interpolate To ‘xq’
-
-            y2i = interp1(x2, y2, xq, 'linear','extrap');   % Interpolate To ‘xq’
-
-
-            % Use polyxpoly to find intersection points for wet perimeter calculus
-            [intersection_x, ~] = polyxpoly(x1, y1, x2, y2);
-
-
-            di=diff(intersection_x);
-            width_zvar(1,p)=sum(di(1:2:end));
-
-            area_zvar(1,p)=trapz(xq,y2i)-trapz([min(xq) xq(y1i<zvar(1,p)) max(xq)], [zvar(1,p) y1i(y1i<zvar(1,p)) zvar(1,p)]);
+            % flow area and width at zvar (exact, profile closed by walls)
+            xt = thalwegposition(d(v),y1(v),twin);
+            [area_zvar(1,p),width_zvar(1,p)] = wetgeometry(d(v),y1(v),zvar(1,p),connected,xt);
             h_var(1,p)=area_zvar(1,p)./width_zvar(1,p);
 
         end
@@ -441,6 +369,7 @@ if plt
 
             [xi, yi] = meshgrid(linspace(min(sections), max(sections), n_points), linspace(min(zlim), max(zlim), n_points));
             xy = [sections', zlim'];
+            xy = xy(~any(isnan(xy),2),:);   % sections without peak are ignored
             [f,~] = ksdensity(xy, [xi(:), yi(:)]);
             f = reshape(f, n_points, n_points);
 
@@ -496,7 +425,7 @@ if plt
 
             yyaxis right
 
-            [f, xi] = ksdensity(zlim, 'Bandwidth', 0.2);
+            [f, xi] = ksdensity(zlim(~isnan(zlim)), 'Bandwidth', 0.2);
 
             plot(xi,f,'r-','LineWidth',1)
 
@@ -516,6 +445,7 @@ if plt
 
             [xi, yi] = meshgrid(linspace(min(sections), max(sections), n_points), linspace(min(zlim), max(zlim), n_points));
             xy = [sections', zlim'];
+            xy = xy(~any(isnan(xy),2),:);   % sections without peak are ignored
             [f,~] = ksdensity(xy, [xi(:), yi(:)]);
             f = reshape(f, n_points, n_points);
 
@@ -575,7 +505,7 @@ if plt
 
             yyaxis right
 
-            [f, xi] = ksdensity(zlim, 'Bandwidth', 0.2);
+            [f, xi] = ksdensity(zlim(~isnan(zlim)), 'Bandwidth', 0.2);
 
             plot(xi,f,'r-','LineWidth',1)
 
@@ -595,6 +525,7 @@ if plt
 
             [xi, yi] = meshgrid(linspace(min(sections), max(sections), n_points), linspace(min(zlim), max(zlim), n_points));
             xy = [sections', zlim'];
+            xy = xy(~any(isnan(xy),2),:);   % sections without peak are ignored
             [f,~] = ksdensity(xy, [xi(:), yi(:)]);
             f = reshape(f, n_points, n_points);
 
@@ -647,3 +578,112 @@ if plt
     end
 end
 
+end
+
+%% ------------------------------------------------------------------------
+function [idx,pr] = localpeaks(hc)
+% interior local maxima (indices and prominence, ISLOCALMAX) of the first
+% continuous run of non-NaN values of the hydraulic depth curve hc
+hc = hc(:);
+idx = zeros(0,1);
+pr  = zeros(0,1);
+i1 = find(~isnan(hc),1,'first');
+if isempty(i1)
+    return
+end
+i2 = find(isnan(hc(i1:end)),1,'first');
+if isempty(i2)
+    i2 = numel(hc);
+else
+    i2 = i1 + i2 - 2;
+end
+seg = hc(i1:i2);
+if numel(seg) < 3
+    return
+end
+[TF,P] = islocalmax(seg);
+idx = find(TF) + i1 - 1;
+pr  = P(TF);
+end
+
+%% ------------------------------------------------------------------------
+function [A,W,P] = wetgeometry(xv,yv,L,connected,xt)
+% WETGEOMETRY exact flow area (A), flow width (W) and wetted perimeter (P)
+% of the profile (xv,yv) for the water level L.
+%
+% The profile is a polyline (the bed is linear between consecutive
+% vertices) closed at both ends by vertical walls, so the water is always
+% confined within the profile. Each wet interval is delimited by the
+% intersections between the water level and the profile (or by the walls);
+% the area is computed with TRAPZ on the vertices and the intersections,
+% which is exact for a polyline. The walls are not part of the wetted
+% perimeter. If connected is true, only the wet interval containing the
+% thalweg (x = xt) is considered.
+
+A = 0; W = 0; P = 0;
+
+[xv,o] = sort(xv(:)');
+yv = yv(:)';
+yv = yv(o);
+n = numel(xv);
+
+wet = yv < L;
+if ~any(wet)
+    return
+end
+
+% runs of consecutive wet vertices
+dw = diff([false wet false]);
+i1 = find(dw == 1);
+i2 = find(dw == -1) - 1;
+
+for k = 1:numel(i1)
+    a = i1(k);
+    b = i2(k);
+    xs = xv(a:b);
+    ys = yv(a:b);
+
+    % left boundary: intersection with the water level or wall
+    if a > 1
+        xa = xv(a-1) + (L-yv(a-1)) / (yv(a)-yv(a-1)) * (xv(a)-xv(a-1));
+        xs = [xa xs]; %#ok<AGROW>
+        ys = [L ys];  %#ok<AGROW>
+    end
+    % right boundary: intersection with the water level or wall
+    if b < n
+        xb = xv(b) + (L-yv(b)) / (yv(b+1)-yv(b)) * (xv(b+1)-xv(b));
+        xs = [xs xb]; %#ok<AGROW>
+        ys = [ys L];  %#ok<AGROW>
+    end
+
+    if connected && ~(xs(1) <= xt && xs(end) >= xt)
+        continue
+    end
+
+    A = A + trapz(xs, L - ys);
+    W = W + (xs(end) - xs(1));
+    P = P + sum(hypot(diff(xs), diff(ys)));
+
+    if connected
+        break
+    end
+end
+end
+
+%% ------------------------------------------------------------------------
+function xt = thalwegposition(xv,yv,twin)
+% THALWEGPOSITION position of the thalweg along the profile (xv,yv): the
+% lowest point within twin meters from the centre of the profile (d = 0).
+% If no point lies within the window, the point closest to the centre is
+% used.
+m = abs(xv) <= twin;
+if ~any(m)
+    [~,k] = min(abs(xv));
+    xt = xv(k);
+    return
+end
+xm = xv(m);
+ym = yv(m);
+[~,k] = min(ym);
+xt = xm(k);
+end

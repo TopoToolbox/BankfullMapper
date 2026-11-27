@@ -11,8 +11,10 @@ function [slope,zw,zc,zs]=sectiongradient(DEM,SW,step,varargin)
 %     This function allows to compute the river gradient between the
 %     consecutive sections using a downstream elevation correction and a
 %     smoothing of the profile applying a moving mean with a user defined
-%     window size. Pay attention that the river course is supposed to go
-%     downstream.
+%     window size. The flow direction of the river course is detected
+%     automatically: if the course has been digitized from downstream to
+%     upstream, the downstream correction is applied in the opposite
+%     direction (the section order of the outputs does not change).
 %
 %
 % Input arguments
@@ -36,7 +38,7 @@ function [slope,zw,zc,zs]=sectiongradient(DEM,SW,step,varargin)
 %     zs         elevation profile after smoothing
 %
 % Author: Michele Delchiaro (michele.delchiaro[at]uniroma1.it)
-% Date: 11. July, 2024
+% Date: 11. July, 2024, - updated 27. November, 2026
 %
 %
 % Parse inputs
@@ -63,6 +65,19 @@ SWw = SWATHobj(DEM,SW.xy0(:,1),SW.xy0(:,2),'width',0);
 zw = zw(:,1)';
 zc = zw;
 
+% Detect the flow direction (linear trend of the elevation along the course)
+iv = find(~isnan(zw));
+reversed = false;
+if numel(iv) >= 2
+    pf = polyfit(iv, zw(iv), 1);
+    reversed = pf(1) > 0;
+end
+if reversed
+    warning('sectiongradient:direction', ...
+        'The river course goes from downstream to upstream: the downstream correction is applied in the opposite direction.')
+    zc = fliplr(zc);
+end
+
 % Ensure the elevation decreases downstream
 for i = 2:length(zc)
     if zc(i) > zc(i-1)
@@ -70,10 +85,21 @@ for i = 2:length(zc)
     end
 end
 
+if reversed
+    zc = fliplr(zc);
+end
+
 % Apply a moving average filter to smooth the profile
 zs = movmean(zc, windowsize);
 slope=diff(zs(1,:)/step);
-slope=[NaN,slope];
+if reversed
+    slope=-slope;   % negative in the flow direction
+end
+if isempty(slope)
+    slope=NaN;
+else
+    slope=[slope(1),slope];   % first section: same gradient as the second (no NaN)
+end
 
 if plt
     figure

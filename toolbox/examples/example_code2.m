@@ -23,8 +23,13 @@ S2=shaperead("marecchia2022.shp");
 % Optional inputs
 step=50;        % stepping in meters between transversal river profiles
 width=2500;     % width in meters of the transversal river profiles
-smooth=500;     % smoothing of the planar trace from which the profiles are extracted
+smooth=true;    % smoothing of the planar trace used to orient the profiles (TopoToolbox 3: true/false)
 max_depth=6;    % maximum height from the thalveg for which the bankfull is computed
+% The 2022 profiles are extracted along the 2008 river course (S), so that the
+% same sections can be compared. Since the channel moved between 2008 and
+% 2022, the 2022 thalweg is searched within a wider window around the 2008
+% course (it should cover the channel shift, but not include gravel pits)
+tw2=200;        % thalweg window (m) for 2022 (default 10 m is used for 2008)
 n=0.05;         % n riverbed roughness coefficient in Manning's equation (Manning, 1904)
 
 %% PROFILING
@@ -37,7 +42,7 @@ n=0.05;         % n riverbed roughness coefficient in Manning's equation (Mannin
 % 2009
 bank=bankfull(d,z,'max_depth',max_depth);
 % 2022
-bank2=bankfull(d2,z2,'max_depth',max_depth);
+bank2=bankfull(d2,z2,'max_depth',max_depth,'thalwegwindow',tw2);
 
 %% PEAKS EXTRACTION FROM HYDRAULIC DEPTH FUNCTION 
 % 2009
@@ -52,9 +57,9 @@ lim_max=detect_peak(bank.h,bank.area,bank.width,bank.elevation,d,z,'peak','max')
 % ALL MODE: all the peaks are extracted
 lim_all2=detect_peak(bank2.h,bank2.area,bank2.width,bank2.elevation,'peak','all');
 % LOWEST MODE: the lowest peaks are extracted
-lim_low2=detect_peak(bank2.h,bank2.area,bank2.width,bank2.elevation,d2,z2,'peak','lowest');
+lim_low2=detect_peak(bank2.h,bank2.area,bank2.width,bank2.elevation,d2,z2,'peak','lowest','thalwegwindow',tw2);
 % MAX MODE: the most prominent peaks are extracted
-lim_max2=detect_peak(bank2.h,bank2.area,bank2.width,bank2.elevation,d2,z2,'peak','max');
+lim_max2=detect_peak(bank2.h,bank2.area,bank2.width,bank2.elevation,d2,z2,'peak','max','thalwegwindow',tw2);
 
 
 %% SLOPE COMPUTATION
@@ -75,11 +80,11 @@ R_maxB=manningseq(SW,z,z_dem,step,d,lim_max.zvar,'n',n,'slope',slope1,'plot',fal
 
 % 2022
 % discharge computation using the measured peak elevation 
-R_low2A=manningseq(SW2,z2,z_dem2,step,d2,lim_low2.zlim,'n',n,'slope',slope2,'plot',false);
-R_max2A=manningseq(SW2,z2,z_dem2,step,d2,lim_max2.zlim,'n',n,'slope',slope2,'plot',false);
+R_low2A=manningseq(SW2,z2,z_dem2,step,d2,lim_low2.zlim,'n',n,'slope',slope2,'plot',false,'thalwegwindow',tw2);
+R_max2A=manningseq(SW2,z2,z_dem2,step,d2,lim_max2.zlim,'n',n,'slope',slope2,'plot',false,'thalwegwindow',tw2);
 % discharge computation using the most probable elevation
-R_low2B=manningseq(SW2,z2,z_dem2,step,d2,lim_low2.zvar,'n',n,'slope',slope2,'plot',false);
-R_max2B=manningseq(SW2,z2,z_dem2,step,d2,lim_max2.zvar,'n',n,'slope',slope2,'plot',false);
+R_low2B=manningseq(SW2,z2,z_dem2,step,d2,lim_low2.zvar,'n',n,'slope',slope2,'plot',false,'thalwegwindow',tw2);
+R_max2B=manningseq(SW2,z2,z_dem2,step,d2,lim_max2.zvar,'n',n,'slope',slope2,'plot',false,'thalwegwindow',tw2);
 
 
 %% BANKFULL GEOMETRY AND DISCHARGE MAPPING 
@@ -91,9 +96,9 @@ R_max2B=manningseq(SW2,z2,z_dem2,step,d2,lim_max2.zvar,'n',n,'slope',slope2,'plo
 
 % 2022
 % for lowest mode extracted peaks
-[f_Zlim_low2,f_Zvar_low2,f_Qlim_low2,f_Qvar_low2,residual_Z_low2,residual_Q_low2,res_Z_low2,res_Q_low2]=visual(REM2,DEM2,SW2,step,lim_low2.zlim,lim_low2.zvar,R_low2A.Q_zvar,R_low2B.Q_zvar,'plot',false);
+[f_Zlim_low2,f_Zvar_low2,f_Qlim_low2,f_Qvar_low2,residual_Z_low2,residual_Q_low2,res_Z_low2,res_Q_low2]=visual(REM2,DEM2,SW2,step,lim_low2.zlim,lim_low2.zvar,R_low2A.Q_zvar,R_low2B.Q_zvar,'plot',false,'thalwegwindow',tw2);
 % for max mode extracted peaks
-[f_Zlim_max2,f_Zvar_max2,f_Qlim_max2,f_Qvar_max2,residual_Z_max2,residual_Q_max2,res_Z_max2,res_Q_max2]=visual(REM2,DEM2,SW2,step,lim_max2.zlim,lim_max2.zvar,R_max2A.Q_zvar,R_max2B.Q_zvar,'plot',false);
+[f_Zlim_max2,f_Zvar_max2,f_Qlim_max2,f_Qvar_max2,residual_Z_max2,residual_Q_max2,res_Z_max2,res_Q_max2]=visual(REM2,DEM2,SW2,step,lim_max2.zlim,lim_max2.zvar,R_max2A.Q_zvar,R_max2B.Q_zvar,'plot',false,'thalwegwindow',tw2);
 
 
 %% EXPORTING OUTPUTS 

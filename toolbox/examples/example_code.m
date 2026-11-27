@@ -1,11 +1,11 @@
 %% EXAMPLE1: POTENZA RIVER CASE STUDY (MARCHE, ITALY)
 
 %% WORKING DIRECTORY
-WD='path\to\downloaded\data\';
+WD="path\to\downloaded\data\";
 
 %% INPUT DATA
 % load DEM
-DEM=GRIDobj(WD+"DEM_Potenza.tif");
+DEM=GRIDobj(WD+"dem_Potenza.tif");
 
 % load REM
 REM=GRIDobj(WD+"REM_Potenza.tif");

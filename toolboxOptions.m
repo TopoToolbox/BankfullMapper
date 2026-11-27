@@ -16,7 +16,7 @@ function opts = toolboxOptions
     % when you add functionality in a backward compatible manner. Increment
     % the PATCH version when you make backward compatible bug fixes.
     
-    opts.ToolboxVersion = "1.0.0";
+    opts.ToolboxVersion = "1.0.3";
 
     % Folders to add to MATLAB path during toolbox installation, specified
     % as a string vector. When specifying ToolboxMatlabPath, include the
